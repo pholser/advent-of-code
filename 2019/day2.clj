@@ -1,14 +1,15 @@
 (require '[clojure.string :as str])
+(require '[clojure.math.combinatorics :as combos])
+
+(defn replace-at [seq index replacement]
+  (concat (take index seq) (list replacement) (drop (+ index 1) seq)))
 
 (defn execute-op [op program start]
   (let [inpos1 (nth program (+ start 1))
          inpos2 (nth program (+ start 2))
          outpos (nth program (+ start 3))
          result (op (nth program inpos1) (nth program inpos2))]
-    (concat
-      (take outpos program)
-      [result]
-      (drop (+ outpos 1) program))))
+    (replace-at program outpos result)))
 
 (defn run-at [program start]
   (let [opcode (nth program start)]
@@ -21,8 +22,8 @@
           (IllegalArgumentException.
             (format "Weird opcode at %d: %d" start opcode))))))
 
-(defn run [program]
-  (run-at program 0))
+(defn run [program noun verb]
+  (first (run-at (replace-at (replace-at program 2 verb) 1 noun) 0)))
 
 (defn read-program [seq]
   (map
@@ -31,5 +32,14 @@
 
 (defn day2-part1 []
   (with-open [program-in (clojure.java.io/reader "./1202-program-alarm.txt")]
-    (run (read-program (line-seq program-in)))))
+    (run (read-program (line-seq program-in)) 12 2)))
+
+(defn day2-part2 []
+  (with-open [program-in (clojure.java.io/reader "./1202-program-alarm.txt")]
+    (first
+      (filter
+        (fn [pair]
+          (let [[noun verb] pair]
+            (= 19690720 (run (read-program (line-seq program-in) noun verb)))))
+        (combos/cartesian-product (range 100) (range 100)))))) 
 
