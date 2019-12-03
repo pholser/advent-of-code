@@ -31,15 +31,18 @@
     (mapcat (fn [line] (str/split line #",")) seq)))
 
 (defn day2-part1 []
-  (with-open [program-in (clojure.java.io/reader "./1202-program-alarm.txt")]
+  (with-open [program-in (clojure.java.io/reader "src/1202-program-alarm.txt")]
     (run (read-program (line-seq program-in)) 12 2)))
 
 (defn day2-part2 []
-  (with-open [program-in (clojure.java.io/reader "./1202-program-alarm.txt")]
-    (first
-      (filter
-        (fn [pair]
-          (let [[noun verb] pair]
-            (= 19690720 (run (read-program (line-seq program-in) noun verb)))))
-        (combos/cartesian-product (range 100) (range 100)))))) 
+  (with-open [program-in (clojure.java.io/reader "src/1202-program-alarm.txt")]
+    (let [program (read-program (line-seq program-in))
+         [result-noun result-verb]
+           (first
+             (filter
+               (fn [pair]
+                 (let [[noun verb] pair]
+                   (= 19690720 (run program noun verb))))
+               (combos/cartesian-product (range 100) (range 100))))]
+         (+ (* 100 result-noun) result-verb))))
 
