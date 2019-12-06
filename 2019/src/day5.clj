@@ -38,12 +38,27 @@
       (println val)
       program)))
 
+(defn jump-dest [op program start modes]
+  (let [val (arg-at program start modes 0)
+         newptr (arg-at program start modes 1)]
+    (if (op 0 val) newptr (+ start 3))))
+
+(defn execute-compare-op [op program start modes]
+  (let [inval1 (arg-at program start modes 0)
+         inval2 (arg-at program start modes 1)
+         outpos (Integer/parseInt (value-of-memory-cell program (+ start 3)))]
+    (store-at program outpos (if (op inval1 inval2) "1" "0"))))
+
 (defn parse-instruction [instruction]
   (case instruction
     "1" {:opcode "01" :modes [value-at value-at]}
     "2" {:opcode "02" :modes [value-at value-at]}
     "3" {:opcode "03" :modes []}
     "4" {:opcode "04" :modes [value-at]}
+    "5" {:opcode "05" :modes [value-at value-at]}
+    "6" {:opcode "06" :modes [value-at value-at]}
+    "7" {:opcode "07" :modes [value-at value-at]}
+    "8" {:opcode "08" :modes [value-at value-at]}
     "99" {:opcode "99" :modes []}
     (let [divider (- (count instruction) 2)]
       {:opcode (subs instruction divider)
@@ -68,10 +83,22 @@
       "04"
         (run-at
           (execute-print-op program start (:modes instruction)) (+ start 2))
+      "05"
+        (run-at
+           program (jump-dest not= program start (:modes instruction)))
+      "06"
+        (run-at
+           program (jump-dest = program start (:modes instruction)))
+      "07"
+        (run-at
+          (execute-compare-op < program start (:modes instruction)) (+ start 4))
+      "08"
+        (run-at
+          (execute-compare-op = program start (:modes instruction)) (+ start 4))
       "99" program
       (throw
         (IllegalArgumentException.
-          (format "Weird opcode at %d: %s" start (:opcode instruction))))))) 
+          (format "Weird opcode at %d: %s" start (:opcode instruction)))))))
 
 (defn run [program]
   (first (run-at program 0)))
@@ -79,8 +106,8 @@
 (defn read-program [seq]
   (mapcat (fn [line] (str/split line #",")) seq))
 
-(defn day5-part1 []
+(defn day5 []
   (with-open
-    [program-in (clojure.java.io/reader "src/day5-part1-program.txt")]
+    [program-in (clojure.java.io/reader "src/day5-program.txt")]
     (run (read-program (doall (line-seq program-in))))))
 
