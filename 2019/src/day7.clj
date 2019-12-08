@@ -1,6 +1,6 @@
 (require '[clojure.string :as str])
 (require '[clojure.math.combinatorics :as combos])
-(require '[clojure.core.async :as a :refer [chan poll! put!]])
+(require '[clojure.core.async :as a])
 
 (defn replace-at [seq index replacement]
   (concat (take index seq) (list replacement) (drop (+ index 1) seq)))
@@ -30,14 +30,14 @@
     (store-at program outpos result)))
 
 (defn execute-store-op [program input start modes]
-  (let [val (Integer/parseInt (poll! input))
+  (let [val (Integer/parseInt (a/<!! input))
          outpos (Integer/parseInt (value-of-memory-cell program (+ start 1)))]
     (store-at program outpos val)))
 
 (defn execute-print-op [program output start modes]
   (let [val (arg-at program start modes 0)]
     (do
-      (put! output (str val))
+      (a/>!! output (str val))
       program)))
 
 (defn jump-dest [op program start modes]
@@ -139,12 +139,12 @@
   {:program program :input input :output output})
 
 (defn amp-input [amp value]
-  (put! (:input amp) (str value)))
+  (a/>!! (:input amp) (str value)))
 
 (defn amp-run [amp]
   (run (:program amp) (:input amp) (:output amp)))
   
-(defn day7-part1 [file-name]
+(defn day7 [file-name phase-min phase-max]
   (with-open
     [program-in (clojure.java.io/reader file-name)]
     (let [instructions (doall (line-seq program-in))]
@@ -152,17 +152,16 @@
         (map
           (fn [[ph1 ph2 ph3 ph4 ph5]]
             (let [
-              in (chan)
-              chan12 (chan)
-              chan23 (chan)
-              chan34 (chan)
-              chan45 (chan)
-              out (chan)
+              in (a/chan 10)
+              chan12 (a/chan 10)
+              chan23 (a/chan 10)
+              chan34 (a/chan 10)
+              chan45 (a/chan 10)
               amp1 (amplifier (read-program instructions) in chan12)
               amp2 (amplifier (read-program instructions) chan12 chan23)
               amp3 (amplifier (read-program instructions) chan23 chan34)
               amp4 (amplifier (read-program instructions) chan34 chan45)
-              amp5 (amplifier (read-program instructions) chan45 out)]
+              amp5 (amplifier (read-program instructions) chan45 in)]
               (do
                 (amp-input amp1 ph1)
                 (amp-input amp1 0)
@@ -170,11 +169,11 @@
                 (amp-input amp3 ph3)
                 (amp-input amp4 ph4)
                 (amp-input amp5 ph5)
-                (amp-run amp1)
-                (amp-run amp2)
-                (amp-run amp3)
-                (amp-run amp4)
+                (a/thread (amp-run amp1))
+                (a/thread (amp-run amp2))
+                (a/thread (amp-run amp3))
+                (a/thread (amp-run amp4))
                 (amp-run amp5)
-                (Integer/parseInt (poll! (:output amp5))))))
-          (combos/permutations (range 0 5)))))))
+                (Integer/parseInt (a/<!! (:output amp5))))))
+          (combos/permutations (range phase-min (+ 1 phase-max))))))))
 
