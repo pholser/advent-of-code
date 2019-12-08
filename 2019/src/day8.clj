@@ -1,17 +1,20 @@
 (require '[clojure.string :as str])
 
+(defn digit-count-row [digit row]
+  (count (filter (partial = digit) row))) 
+  
 (defn digit-count [digit layer]
-  (count (filter (partial = digit) layer)))
+  (reduce + (map (partial digit-count-row digit) layer)))
 
 (defn layer-with-fewest-zeros-among [layers]
   (apply min-key (partial digit-count 0) layers))
 
 (defn digits->layers [digits width height]
-  (partition
-    (* width height)
-    (map
-      #(Integer/parseInt %)
-      (mapcat (fn [s] (str/split s #"")) digits))))
+  (partition height
+    (partition width
+      (map
+        #(Integer/parseInt %)
+        (mapcat (fn [s] (str/split s #"")) digits)))))
 
 (defn day8-part1 [file-name width height]
   (with-open
