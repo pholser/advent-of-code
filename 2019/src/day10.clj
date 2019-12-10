@@ -44,6 +44,9 @@
         asteroids))))
 (defn visible-from [a asteroids]
   (filter #(clear-line-of-sight? a % asteroids) asteroids))
+(defn location-for-monitoring-station [asteroids]
+  (apply max-key (comp count #(visible-from % asteroids)) asteroids))
+
 (defn part1-answer [asteroids]
   (apply max
     (map (comp count #(visible-from % asteroids)) asteroids)))
@@ -52,5 +55,5 @@
   (with-open
     [rows-in (clojure.java.io/reader file-name)]
     (let [rows (doall (line-seq rows-in))]
-      (part1-answer (asteroid-coordinates rows)))))
+      (asteroid-coordinates rows))))
 
