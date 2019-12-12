@@ -77,7 +77,7 @@
     '()
     (concat
       (map first (vals asteroid-groups))
-      (foo
+      (destruction-order
         (into
           (sorted-map)
           (filter
