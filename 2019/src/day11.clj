@@ -1,4 +1,7 @@
 (require '[clojure.core.async :as a])
+(require '[clojure.java.io :as io])
+(require '[clojure.math.combinatorics :as combo])
+(require '[clojure.string :as str])
 
 (defn new-panel [] (sorted-map))
 
@@ -101,3 +104,47 @@
       (a/thread (.run computer))
       (count (:panel (paint-ship robot))))))
 
+(defn normalize-panel-coords [panel]
+  (let [
+    min-x (apply min (map (fn [[x y]] x) (keys panel)))
+    min-y (apply min (map (fn [[x y]] y) (keys panel)))
+    ]
+    (into
+      (new-panel)
+      (for [[coord color] panel]
+        [ (position
+            (+ (x coord) (max 0 (- min-x)))
+            (+ (y coord) (max 0 (- min-y))))
+          color]))))
+
+(defn render-panel [panel]
+  (let [
+    max-x (apply max (map (fn [[x y]] x) (keys panel)))
+    max-y (apply max (map (fn [[x y]] y) (keys panel)))
+    ]
+    (map
+      (partial str/join "")
+      (partition
+        (+ 1 max-y)
+        (map
+          (fn [coord]
+            (case (get panel coord :black)
+              :black " "
+              :white "*"))
+          (map
+            #(apply vector %)
+            (combo/cartesian-product (range (+ 1 max-x)) (range (+ 1 max-y)))))))))
+
+(defn day11-part2 []
+  (let [
+    inbuf (new java.util.concurrent.LinkedBlockingQueue)
+    outbuf (new java.util.concurrent.LinkedBlockingQueue)
+    computer (new com.pholser.intcode.IntcodeComputer 20000 inbuf outbuf)
+    program-in (io/input-stream "src/day11-input.txt")
+    panel (paint-panel (new-panel) (position 0 0) :white)
+    robot (new-robot computer panel (position 0 0) :up) 
+    ]
+    (do
+      (.loadProgram computer program-in) 
+      (a/thread (.run computer))
+      (render-panel (normalize-panel-coords (:panel (paint-ship robot)))))))
