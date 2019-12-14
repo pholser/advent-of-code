@@ -1,5 +1,3 @@
-(require '[clojure.string :as str])
-
 (defn x [coord] (first coord))
 (defn y [coord] (second coord))
 (defn r [coord] (first coord))
