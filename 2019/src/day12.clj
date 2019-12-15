@@ -10,6 +10,19 @@
 (defn new-moon
   ([position] {:position position :velocity (new-velocity)})
   ([position velocity] {:position position :velocity velocity}))
+(defn potential-energy [moon]
+  (+ 
+    (Math/abs (:x (:position moon)))
+    (Math/abs (:y (:position moon)))
+    (Math/abs (:z (:position moon)))))
+(defn kinetic-energy [moon]
+  (+ 
+    (Math/abs (:x (:velocity moon)))
+    (Math/abs (:y (:velocity moon)))
+    (Math/abs (:z (:velocity moon)))))
+(defn total-energy [moon] (* (potential-energy moon) (kinetic-energy moon)))
+(defn total-energy-in-system [moons]
+  (reduce + (map total-energy moons)))
 
 (defn apply-gravity-between [m1 m2]
   (let [
@@ -108,5 +121,5 @@
       lines (doall (line-seq positions-in))
       moons (map (comp new-moon read-position) lines)
       ]
-      moons)))
+      (total-energy-in-system (simulate-motion moons 1000)))))
 
