@@ -3,6 +3,20 @@
 (defn replace-at [seq index replacement]
   (concat (take index seq) (list replacement) (drop (+ index 1) seq)))
 
+(defn least-common-multiple [& args]
+  (letfn [(gcd [x y]
+            (let [a (max x y)
+                  b (min x y)
+                  m (mod a b)]
+              (if (zero? m)
+                b
+                (recur b m))))
+          (lcm [a b]
+            (/ (* a b) (gcd a b)))]
+    (reduce lcm args)
+  )
+)
+
 (defn new-position [x y z] {:x x :y y :z z})
 (defn new-velocity
   ([] {:x 0 :y 0 :z 0})
@@ -88,12 +102,15 @@
 (defn apply-velocity [moons]
   (map apply-velocity-single moons))
 
+(defn simulate-motion-step [moons]
+  (apply-velocity (apply-gravity moons)))
 (defn simulate-motion [moons steps]
-  (if (<= steps 0)
-    moons
-    (simulate-motion
-      (apply-velocity (apply-gravity moons))
-      (- steps 1))))
+  (loop [m moons s steps]
+    (if (<= s 0)
+      m
+      (recur
+        (simulate-motion-step m)
+        (- s 1)))))
 
 (defn read-position [line]
   (let [
@@ -114,6 +131,31 @@
 (defn read-positions [raw-position-lines]
   (map read-position raw-position-lines))
 
+(defn step-of-first-repeat-dimension
+  ([moons dim] (step-of-first-repeat-dimension moons dim (hash-set) 0))
+  ([moons dim pasts count]
+    (loop [m moons d dim p pasts c count]
+      (let [
+        new-moons (simulate-motion-step m)
+        new-dim
+          (map
+            (fn [m] {:pos (d (:position m)) :vel (d (:velocity m))})
+            new-moons)
+      ] 
+      (if (contains? p new-dim)
+        c
+        (recur
+          new-moons
+          d
+          (conj p new-dim)
+          (+ 1 c)))))))
+
+(defn step-of-first-repeat-state [moons]
+  (least-common-multiple
+    (step-of-first-repeat-dimension moons :x)
+    (step-of-first-repeat-dimension moons :y)
+    (step-of-first-repeat-dimension moons :z)))
+
 (defn day12-part1 [file-name]
   (with-open
     [positions-in (clojure.java.io/reader file-name)]
@@ -122,4 +164,13 @@
       moons (map (comp new-moon read-position) lines)
       ]
       (total-energy-in-system (simulate-motion moons 1000)))))
+
+(defn day12-part2 [file-name]
+  (with-open
+    [positions-in (clojure.java.io/reader file-name)]
+    (let [
+      lines (doall (line-seq positions-in))
+      moons (map (comp new-moon read-position) lines)
+      ]
+      (step-of-first-repeat-state moons))))
 
