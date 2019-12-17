@@ -3,19 +3,62 @@
 
 (defn new-reaction [ingredients product]
   {:ingredients ingredients :product product})
+
 (defn parse-ingredient [raw-ingredient]
   (let [[raw-quantity raw-chemical] (str/split raw-ingredient #" " 2)]
-    {:quantity (Integer/parseInt raw-quantity)
-     :chemical raw-chemical}))
+    [raw-chemical (Integer/parseInt raw-quantity)]))
+(defn parse-product [raw-product]
+  (let [[raw-quantity raw-chemical] (str/split raw-product #" " 2)]
+    {:chemical raw-chemical :output-qty (Integer/parseInt raw-quantity)}))
 (defn parse-ingredients [raw-ingredients]
-  (map parse-ingredient (str/split raw-ingredients #", ")))
+  (into (hash-map)
+    (map parse-ingredient (str/split raw-ingredients #", "))))
+
 (defn read-reaction [line]
   (let [
     [raw-ingredients raw-product] (str/split line #" => ")
     ingredients (parse-ingredients raw-ingredients)
-    product (parse-ingredient raw-product)
+    product (parse-product raw-product)
     ]
     (new-reaction ingredients product)))
+
+(defn reactions-by-product [reactions]
+  (into (hash-map)
+    (map
+      (fn [r]
+        [
+          (:chemical (:product r))
+          {:output-qty (:output-qty (:product r))
+           :ingredients (:ingredients r)}
+        ]
+      )
+      reactions)))
+
+(defn directly-reducible-to-ore? [chem reactions]
+  (let [r (get reactions chem)]
+    (= ["ORE"] (keys (:ingredients r)))))
+
+; (amt / (get c (:ingredients r)), rounded up, * output-qty
+(defn reduce-to-ore [chem-qty reactions]
+  (loop [cq chem-qty rs reactions]
+    (cond
+      (every? (fn [c] (directly-reducible-to-ore? c rs)) (keys cq))
+    (reduce +
+      (map
+        (fn [c]
+          (let [
+            r (get rs c)
+            q (get cq c)
+            o (:output-qty r)
+            ]
+            (* (get (:ingredients r) "ORE") (int (Math/ceil (/ q o))))))
+        (keys cq)))
+
+    :else
+      false
+      ; reduce every chem-qty pair not directly reducible to ore
+      ; by one level, and collapse quantities for the same product
+)))
 
 (defn day14-part1 [file-name]
   (with-open
@@ -24,4 +67,5 @@
       lines (doall (line-seq reactions-in)) 
       reactions (map read-reaction lines)
       ]
-      reactions)))
+      (reactions-by-product reactions))))
+
