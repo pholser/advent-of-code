@@ -34,6 +34,14 @@
       )
       reactions)))
 
+(defn run-reaction-in-reverse [reactions chem qty]
+  (let [
+    r (get reactions chem)
+    o (:output-qty r)
+    ]
+    (into (hash-map)
+      (for [[c q] (:ingredients r)]
+        [c (* q (int (Math/ceil (/ qty o))))]))))
 (defn directly-reducible-to-ore? [chem reactions]
   (let [r (get reactions chem)]
     (= ["ORE"] (keys (:ingredients r)))))
@@ -43,22 +51,25 @@
   (loop [cq chem-qty rs reactions]
     (cond
       (every? (fn [c] (directly-reducible-to-ore? c rs)) (keys cq))
-    (reduce +
-      (map
-        (fn [c]
-          (let [
-            r (get rs c)
-            q (get cq c)
-            o (:output-qty r)
-            ]
-            (* (get (:ingredients r) "ORE") (int (Math/ceil (/ q o))))))
-        (keys cq)))
+      (reduce + 
+        (map
+          (fn [c] (get (run-reaction-in-reverse rs c (get cq c)) "ORE"))
+          (keys cq)))
 
     :else
-      false
-      ; reduce every chem-qty pair not directly reducible to ore
-      ; by one level, and collapse quantities for the same product
-)))
+      (recur
+        (let [
+          cs
+          (group-by (fn [c] (directly-reducible-to-ore? c rs)) (keys cq))
+          ]
+          (apply
+            (partial merge-with +)
+            (flatten [
+              (select-keys cq (get cs true))
+              (map (fn [c] (run-reaction-in-reverse rs c (get cq c)))
+                (get cs false))
+            ])))
+        rs))))
 
 (defn day14-part1 [file-name]
   (with-open
